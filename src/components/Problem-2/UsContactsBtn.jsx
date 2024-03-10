@@ -1,7 +1,14 @@
+import { useEffect, useState } from 'react';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
+import ContactsList from '../common/ContactsList';
 
 function UsContactsBtn({ showModalB, setShowModalB, setShowModalA }) {
+  const [loading, setLoading] = useState(false);
+  const [nextPage, setNextPage] = useState(null);
+  const [triggerFetch, setTriggerFetch] = useState(false);
+  const [contactsInfo, setContactsInfo] = useState(null);
+
   const handleClose = () => setShowModalB(false);
   const handleShow = () => setShowModalB(true);
   const switchToModalA = () => {
@@ -9,6 +16,38 @@ function UsContactsBtn({ showModalB, setShowModalB, setShowModalA }) {
     setShowModalA(true);
   };
 
+  const fetchApi = (
+    apiEndPoint = 'https://contact.mediusware.com/api/country-contacts/united%20states/',
+  ) => {
+    setLoading(true);
+    fetch(apiEndPoint)
+      .then((response) => response.json())
+      .then((result) => {
+        if (contactsInfo?.length) {
+          setContactsInfo(contactsInfo.concat(result.results));
+        } else {
+          setContactsInfo(result.results);
+        }
+
+        setNextPage(result.next);
+      })
+      .finally(() => {
+        setLoading(false);
+        setTriggerFetch(false);
+      });
+  };
+
+  useEffect(() => {
+    if (showModalB) {
+      fetchApi();
+    }
+  }, [showModalB]);
+
+  useEffect(() => {
+    if (triggerFetch && nextPage) {
+      fetchApi(nextPage);
+    }
+  }, [triggerFetch, nextPage]);
   return (
     <>
       <button
@@ -22,7 +61,13 @@ function UsContactsBtn({ showModalB, setShowModalB, setShowModalA }) {
         <Modal.Header closeButton>
           <Modal.Title>Modal heading B</Modal.Title>
         </Modal.Header>
-        <Modal.Body>Woohoo, you are reading this text in a modal!</Modal.Body>
+        <Modal.Body style={{ maxHeight: '400px', overflow: 'auto' }}>
+          <ContactsList
+            contactsInfo={contactsInfo}
+            setTriggerFetch={setTriggerFetch}
+          />
+          {loading ? <p>Loading...</p> : null}
+        </Modal.Body>
         <Modal.Footer>
           <Button variant='primary' onClick={switchToModalA}>
             All Contacts
